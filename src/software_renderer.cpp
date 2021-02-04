@@ -284,6 +284,20 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
                                               Color color ) {
   // Task 1: 
   // Implement triangle rasterization (you may want to call fill_sample here)
+  if (min({x0, x1, x2, y0, y1, y2}) < 0 || max({x0, x1, x2}) >= target_w) return;
+  if (max({y0, y1, y2}) >= target_h) return;
+
+
+  float area = abs(x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1));
+
+  for(float sx = 0; sx < target_w; ++sx){
+    for(float sy = 0; sy < target_h; ++sy){
+      float area0 = abs(sx * (y1 - y2) + x1 * (y2 - sy) + x2 * (sy - y1));
+      float area1 = abs(x0 * (sy - y2) + sx * (y2 - y0) + x2 * (y0 - sy));
+      float area2 = abs(x0 * (y1 - sy) + x1 * (sy - y0) + sx * (y0 - y1));
+      if (area0 + area1 + area2 <= area + 3.0) fill_pixel(sx, sy,color);
+    }
+  }
 
 }
 
