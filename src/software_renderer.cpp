@@ -295,6 +295,17 @@ void SoftwareRendererImp::rasterize_line( float x0, float y0,
 
 }
 
+bool is_inside(pt a, pt b, pt c, pt sample){
+  double sign_0 = orient( a,  b,  sample);
+  double sign_1 = orient( b,  c,  sample);
+  double sign_2 = orient( c,  a,  sample);
+
+  if(sign_0 <= 0 && sign_1 <= 0 && sign_2 <= 0) return true;
+  else if(sign_0 >= 0 && sign_1 >= 0 && sign_2 >= 0) return true;
+  return false;
+}
+
+
 void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
                                               float x1, float y1,
                                               float x2, float y2,
@@ -314,32 +325,12 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   int min_tr_h = floor( min({y0, y1, y2}) );
   int max_tr_h = floor( max({y0, y1, y2}) );
 
-
   for (int x = min_tr_w; x <= max_tr_w; ++x){
     for(int y = min_tr_h; y <= max_tr_h; y++){
-
       pt sample = {x + 0.5, y + 0.5};
-
-      double sign_0 = orient( a,  b,  sample);
-      double sign_1 = orient( b,  c,  sample);
-      double sign_2 = orient( c,  a,  sample);
-
-      if(sign_0 <= 0 && sign_1 <= 0 && sign_2 <= 0) fill_pixel(x, y, color);
-      else if(sign_0 >= 0 && sign_1 >= 0 && sign_2 >= 0) fill_pixel(x, y, color);
+      if (is_inside(a,b,c,sample)) fill_pixel(x,y,color);
     }
   }
-
-  /*float area = abs(x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1));
-
-  for(float sx = 0; sx < target_w; ++sx){
-    for(float sy = 0; sy < target_h; ++sy){
-      float area0 = abs(sx * (y1 - y2) + x1 * (y2 - sy) + x2 * (sy - y1));
-      float area1 = abs(x0 * (sy - y2) + sx * (y2 - y0) + x2 * (y0 - sy));
-      float area2 = abs(x0 * (y1 - sy) + x1 * (sy - y0) + sx * (y0 - y1));
-      if (area0 + area1 + area2 <= area + 3.0) fill_pixel(sx, sy,color);
-    }
-  }*/
-
 }
 
 void SoftwareRendererImp::rasterize_image( float x0, float y0,
