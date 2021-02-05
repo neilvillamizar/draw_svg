@@ -5,14 +5,30 @@
 #include <iostream>
 #include <algorithm>
 
+#include <complex> // import complex<>
+
 #include "triangulation.h"
 
 using namespace std;
+
+//////////////// Competitive Programming Version ///////////////
+typedef complex<double> pt;
+#define x_ real() // DO NOT USE x_ & y_ AS VARIABLE NAMES!!!
+#define y_ imag() 
+
+// Products
+double dot(pt v, pt w) {return (conj(v)*w).x_;}
+double cross(pt v, pt w) {return (conj(v)*w).y_;}
+// < 0 c is left of ab, > 0 c is right, = 0 colinear
+double orient(pt a, pt b, pt c) {return cross(b-a,c-a);}
+
+//////////////////////////////////////////////////////////////////
 
 namespace CS248 {
 
 
 // Implements SoftwareRenderer //
+
 
 // fill a sample location with color
 void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
@@ -262,10 +278,11 @@ void SoftwareRendererImp::rasterize_point( float x, float y, Color color ) {
 
   // fill sample - NOT doing alpha blending!
   // TODO: Call fill_pixel here to run alpha blending
-  render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
+  fill_pixel(sx, sy, color);
+  /*render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
   render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
   render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
-  render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
+  render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);*/
 
 }
 
@@ -287,8 +304,32 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   if (min({x0, x1, x2, y0, y1, y2}) < 0 || max({x0, x1, x2}) >= target_w) return;
   if (max({y0, y1, y2}) >= target_h) return;
 
+  // < 0 c is left of ab, > 0 c is right, = 0 colinear
+  // double orient(pt a, pt b, pt c) {return cross(b-a,c-a);}
 
-  float area = abs(x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1));
+  pt a = {x0, y0}, b = {x1, y1}, c = {x2, y2};
+
+  int min_tr_w = floor( min({x0, x1, x2}) );
+  int max_tr_w = floor( max({x0, x1, x2}) );
+  int min_tr_h = floor( min({y0, y1, y2}) );
+  int max_tr_h = floor( max({y0, y1, y2}) );
+
+
+  for (int x = min_tr_w; x <= max_tr_w; ++x){
+    for(int y = min_tr_h; y <= max_tr_h; y++){
+
+      pt sample = {x + 0.5, y + 0.5};
+
+      double sign_0 = orient( a,  b,  sample);
+      double sign_1 = orient( b,  c,  sample);
+      double sign_2 = orient( c,  a,  sample);
+
+      if(sign_0 <= 0 && sign_1 <= 0 && sign_2 <= 0) fill_pixel(x, y, color);
+      else if(sign_0 >= 0 && sign_1 >= 0 && sign_2 >= 0) fill_pixel(x, y, color);
+    }
+  }
+
+  /*float area = abs(x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1));
 
   for(float sx = 0; sx < target_w; ++sx){
     for(float sy = 0; sy < target_h; ++sy){
@@ -297,7 +338,7 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
       float area2 = abs(x0 * (y1 - sy) + x1 * (sy - y0) + sx * (y0 - y1));
       if (area0 + area1 + area2 <= area + 3.0) fill_pixel(sx, sy,color);
     }
-  }
+  }*/
 
 }
 
