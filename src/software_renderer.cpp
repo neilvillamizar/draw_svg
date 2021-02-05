@@ -325,10 +325,26 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   int min_tr_h = floor( min({y0, y1, y2}) );
   int max_tr_h = floor( max({y0, y1, y2}) );
 
-  for (int x = min_tr_w; x <= max_tr_w; ++x){
+  float jump = 1.0 / this->sample_rate;
+  for (int x = min_tr_w; x <= max_tr_w; x++){
     for(int y = min_tr_h; y <= max_tr_h; y++){
-      pt sample = {x + 0.5, y + 0.5};
-      if (is_inside(a,b,c,sample)) fill_pixel(x,y,color);
+      //pt sample = {x + 0.5, y + 0.5};
+      //if (is_inside(a,b,c,sample)) fill_pixel(x,y,color);
+      int cnt = 0;
+      for(int dx = 0; dx < this->sample_rate; dx++){
+        for(int dy = 0; dy < this->sample_rate; dy++){
+          float new_x = x + jump * dx + jump / 2;
+          float new_y = y + jump * dy + jump / 2;
+          pt sample = {new_x, new_y};
+          if (is_inside(a, b, c, sample)) cnt++;
+        }
+      }
+      if (cnt > 0){
+        int tot = this->sample_rate * this->sample_rate;
+        Color aux = color;
+        aux.a *= (1.0 * cnt) / tot;
+        fill_pixel(x,y,aux);
+      }
     }
   }
 }
