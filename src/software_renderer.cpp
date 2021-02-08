@@ -278,6 +278,38 @@ namespace CS248 {
 
     }
 
+    int* set_windings(int x0, int y0, int x1, int y1, int x2, int y2)
+    {
+        // We are going to set the winding anti clock wise
+        int vertices[6];
+        vector<int> x_axis = { x0, x1, x2 };
+        vector<int> y_axis = { y0, y1, y2 };
+
+        // The initial point of the triangle is going to be the higher one
+        int current = min({ y_axis[0], y_axis[1], y_axis[2] });
+        auto it = find(y_axis.begin(), y_axis.end(), current);
+        int index = it - y_axis.begin();
+        vertices[0] = x_axis[index];
+        vertices[1] = y_axis[index];
+        y_axis.erase(y_axis.begin()+index);
+        x_axis.erase(x_axis.begin() + index);
+
+        // The second one is going to be one that is more to the left from the remaining ones
+        current = max({ x_axis[0], x_axis[1] });
+        it = find(x_axis.begin(), x_axis.end(), current);
+        index = it - x_axis.begin();
+        vertices[2] = x_axis[index];
+        vertices[3] = y_axis[index];
+        y_axis.erase(y_axis.begin() + index);
+        x_axis.erase(x_axis.begin() + index);
+
+        // The remaining one is the last one
+        vertices[4] = x_axis[0];
+        vertices[5] = y_axis[0];
+
+        return vertices;
+    }
+
     int check_point(int x, int y, int x0, int y0, int x1, int y1)
     {
         int vector_x = x1 - x0;
@@ -286,20 +318,20 @@ namespace CS248 {
         return (x - x0) * vector_y - (y - y0) * vector_x;
     }
 
-    int check_point_incremental_horizontal(int x, int y, int x0, int y0, int x1, int y1)
+    int check_point_incremental_horizontal(int current_value, int y0, int y1, int direction)
     {
-        int vector_x = x1 - x0;
         int vector_y = y1 - y0;
 
-        return ((x - x0) * vector_y - (y - y0) * vector_x) + vector_y;
+        if(direction > 0) return current_value + vector_y;
+
+        return current_value - vector_y;
     }
 
-    int check_point_incremental_vertical(int x, int y, int x0, int y0, int x1, int y1)
+    int check_point_incremental_vertical(int current_value, int x0, int x1)
     {
         int vector_x = x1 - x0;
-        int vector_y = y1 - y0;
 
-        return ((x - x0) * vector_y - (y - y0) * vector_x) + vector_x;
+        return current_value + vector_x;
     }
 
     bool inside(int pt0, int pt1, int pt2)
@@ -313,23 +345,19 @@ namespace CS248 {
         Color color) {
         // Task 1: 
         // Implement triangle rasterization (you may want to call fill_sample here)
-        // Get points
-        int pt_x0 = (int)floor(x0);
-        int pt_y0 = (int)floor(y0);
-        int pt_x1 = (int)floor(x1);
-        int pt_y1 = (int)floor(y1);
-        int pt_x2 = (int)floor(x2);
-        int pt_y2 = (int)floor(y2);
+
+        // First set the windings of the triangles
+        int* vertices = set_windings((int)floor(x0), (int)floor(y0), (int)floor(x1), (int)floor(y1), (int)floor(x2), (int)floor(y2));
 
         // Check bounds
-        if (min({ pt_x0, pt_x1, pt_x2 }) < 0 || max({ pt_x0, pt_x1, pt_x2 }) >= target_w) return;
-        if (min({ pt_y0, pt_y1, pt_y2 }) < 0 || max({ pt_y0, pt_y1, pt_y2 }) >= target_h) return;
+        if (min({ vertices[0], vertices[2], vertices[4] }) < 0 || max({ vertices[0], vertices[2], vertices[4] }) >= target_w) return;
+        if (min({ vertices[1], vertices[3], vertices[5] }) < 0 || max({ vertices[1], vertices[3], vertices[5] }) >= target_h) return;
 
         // Establish limits for the pixel we are going to check
-        int min_tr_w = floor(min({ x0, x1, x2 }));
-        int max_tr_w = floor(max({ x0, x1, x2 }));
-        int min_tr_h = floor(min({ y0, y1, y2 }));
-        int max_tr_h = floor(max({ y0, y1, y2 }));
+        int min_tr_w = floor(min({ vertices[0], vertices[2], vertices[4] }));
+        int max_tr_w = floor(max({ vertices[0], vertices[2], vertices[4] }));
+        int min_tr_h = floor(min({ vertices[1], vertices[3], vertices[5] }));
+        int max_tr_h = floor(max({ vertices[1], vertices[3], vertices[5] }));
            
         // Check for the pixel on the screen which ones are inside the triangle and which are not
         //for (int x = min_tr_w; x <= max_tr_w; x++)
@@ -337,9 +365,9 @@ namespace CS248 {
         //    for (int y = min_tr_h; y <= max_tr_h; y++)
         //    {
         //        // Calculate the dot product of the point vector and the normal of vector 1
-        //        int pt_inside0 = check_point(x, y, pt_x0, pt_y0, pt_x1, pt_y1);
-        //        int pt_inside1 = check_point(x, y, pt_x1, pt_y1, pt_x2, pt_y2);
-        //        int pt_inside2 = check_point(x, y, pt_x2, pt_y2, pt_x0, pt_y0);
+        //        int pt_inside0 = check_point(x, y, vertices[0], vertices[1], vertices[2], vertices[3]);
+        //        int pt_inside1 = check_point(x, y, vertices[2], vertices[3], vertices[4], vertices[5]);
+        //        int pt_inside2 = check_point(x, y, vertices[4], vertices[5], vertices[0], vertices[1]);
 
         //        if (!inside(pt_inside0, pt_inside1, pt_inside2)) continue;
 
@@ -349,43 +377,74 @@ namespace CS248 {
         //}
 
         // Optimization
-        int itX = 0;
-        int jump_x = min_tr_w;
-        int jump_y = min_tr_h;
+        int current_pixels_filled = 0;
+        int direction = 1;
+        int edges_crossed = 1;
+        int current_point_x = vertices[0];
+        int current_point_y = vertices[1];
 
-        int current_point_x = min_tr_w;
-        int current_point_y = min_tr_h;
+        int pt_inside0 = check_point(current_point_x, current_point_y, vertices[0], vertices[1], vertices[2], vertices[3]);
+        int pt_inside1 = check_point(current_point_x, current_point_y, vertices[2], vertices[3], vertices[4], vertices[5]);
+        int pt_inside2 = check_point(current_point_x, current_point_y, vertices[4], vertices[5], vertices[0], vertices[1]);
 
-        while (current_point_y != max_tr_h && current_point_x != max_tr_w)
+        if (inside(pt_inside0, pt_inside1, pt_inside2))
         {
-            current_point_x += itX;
+            fill_pixel(current_point_x, current_point_y, color);
+            current_pixels_filled++;
+        }
 
-            int pt_inside0 = check_point(current_point_x, current_point_y, pt_x0, pt_y0, pt_x1, pt_y1);
-            int pt_inside1 = check_point(current_point_x, current_point_y, pt_x1, pt_y1, pt_x2, pt_y2);
-            int pt_inside2 = check_point(current_point_x, current_point_y, pt_x2, pt_y2, pt_x0, pt_y0);
+        //while (current_point_y <= max_tr_h)
+        for(int i = 0; i < 500; i++)
+        {
+            current_point_x += direction;
 
-            if (!inside(pt_inside0, pt_inside1, pt_inside2))
+            /*pt_inside0 = check_point_incremental_horizontal(pt_inside0, vertices[1], vertices[3], direction);
+            pt_inside1 = check_point_incremental_horizontal(pt_inside1, vertices[3], vertices[5], direction);
+            pt_inside2 = check_point_incremental_horizontal(pt_inside0, vertices[5], vertices[1], direction);*/
+
+            pt_inside0 = check_point(current_point_x, current_point_y, vertices[0], vertices[1], vertices[2], vertices[3]);
+            pt_inside1 = check_point(current_point_x, current_point_y, vertices[2], vertices[3], vertices[4], vertices[5]);
+            pt_inside2 = check_point(current_point_x, current_point_y, vertices[4], vertices[5], vertices[0], vertices[1]);
+
+            if (!inside(pt_inside0, pt_inside1, pt_inside2) && current_pixels_filled != 0)
             {
-                itX = 0;
-                pt_inside0 = check_point_incremental_vertical(jump_x, jump_y, pt_x0, pt_y0, pt_x1, pt_y1);
-                pt_inside1 = check_point_incremental_vertical(jump_x, jump_y, pt_x1, pt_y1, pt_x2, pt_y2);
-                pt_inside2 = check_point_incremental_vertical(jump_x, jump_y, pt_x2, pt_y2, pt_x0, pt_y0);
+                edges_crossed++;
+                if (edges_crossed < 2)
+                {
+                    direction = direction * -1;
+                    continue;
+                }
+                edges_crossed = 0;
+                current_point_y++;
+
+                /*pt_inside0 = check_point_incremental_vertical(pt_inside0, vertices[0], vertices[2]);
+                pt_inside1 = check_point_incremental_vertical(pt_inside1, vertices[2], vertices[4]);
+                pt_inside2 = check_point_incremental_vertical(pt_inside0, vertices[4], vertices[0]);*/
+
+                pt_inside0 = check_point(current_point_x, current_point_y, vertices[0], vertices[1], vertices[2], vertices[3]);
+                pt_inside1 = check_point(current_point_x, current_point_y, vertices[2], vertices[3], vertices[4], vertices[5]);
+                pt_inside2 = check_point(current_point_x, current_point_y, vertices[4], vertices[5], vertices[0], vertices[1]);
 
                 if (!inside(pt_inside0, pt_inside1, pt_inside2))
                 {
-                    jump_x += 1;
+                    direction = direction * -1;
+                    current_pixels_filled = 0;
+                    edges_crossed++;
+                }
+                else
+                {
+                    fill_pixel(current_point_x, current_point_y, color);
+                    current_pixels_filled = 1;
                 }
 
-                jump_y += 1;
-                current_point_x = jump_x;
-                current_point_y = jump_y;
                 continue;
             }
+            else if (!inside(pt_inside0, pt_inside1, pt_inside2) && current_pixels_filled == 0) continue;
 
             fill_pixel(current_point_x, current_point_y, color);
-            itX += 1;
+            current_pixels_filled++;
         }
-
+        
     }
 
     void SoftwareRendererImp::rasterize_image(float x0, float y0,
