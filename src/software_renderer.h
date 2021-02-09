@@ -64,8 +64,8 @@ class SoftwareRenderer : public SVGRenderer {
   // Render target memory location
   unsigned char* render_target; 
 
-  // supersample render target
-  std::vector<std::vector<std::vector<std::vector<Color>>>> ss_render_target;
+  // // supersample render target
+  // std::vector<std::vector<std::vector<std::vector<Color>>>> ss_render_target;
 
   // Target buffer dimension (in pixels)
   size_t target_w; size_t target_h;
@@ -99,6 +99,9 @@ public:
 	void fill_pixel(int x, int y, const Color& color);
 
 private:
+
+	// supersample render target
+	std::vector<std::vector<std::vector<std::vector<Color>>>> ss_render_target;
 
 	// Primitive Drawing //
 
