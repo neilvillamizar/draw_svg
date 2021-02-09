@@ -65,7 +65,7 @@ void SoftwareRendererImp::draw_svg( SVG& svg ) {
   // set top level transformation
   transformation = canvas_to_screen;
   ss_render_target = vector<vector<vector<vector<Color>>>>(target_w,
-                       vector<vector<vector<Color>>>(target_h,
+                     vector<vector<vector<Color>>>(target_h,
                          vector<vector<Color>>(this->sample_rate,
                              vector<Color>(this->sample_rate, {0, 0, 0, 0}))));
 
@@ -374,20 +374,24 @@ void SoftwareRendererImp::resolve( void ) {
   int sample_cnt = this->sample_rate * this->sample_rate;
   for (int x = 0; x < target_w; x++) {
     for (int y = 0; y < target_h; y++) {
-      Color col = {0,0,0,0};
+      Color col = {0, 0, 0, 0};
       for (int dx = 0; dx < this->sample_rate; dx++) {
         for (int dy = 0; dy < this->sample_rate; dy++) {
-          col.r += ss_render_target[x][y][dx][dy].r;
-          col.g += ss_render_target[x][y][dx][dy].g;
-          col.b += ss_render_target[x][y][dx][dy].b;
-          col.a += ss_render_target[x][y][dx][dy].a;
+          float r = ss_render_target[x][y][dx][dy].r,
+                g = ss_render_target[x][y][dx][dy].g,
+                b = ss_render_target[x][y][dx][dy].b,
+                a = ss_render_target[x][y][dx][dy].a;
+          col.r += r * r;
+          col.g += g * g;
+          col.b += b * b;
+          col.a += a;
         }
       }
-      col.r /= sample_cnt;
-      col.g /= sample_cnt;
-      col.b /= sample_cnt;
-      col.a /= sample_cnt;
-      fill_pixel(x,y,col);
+      col.r = sqrt(col.r / sample_cnt);
+      col.g = sqrt(col.g / sample_cnt);
+      col.b = sqrt(col.b / sample_cnt);
+      col.a = col.a / sample_cnt;
+      fill_pixel(x, y, col);
     }
   }
   return;
