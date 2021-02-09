@@ -64,6 +64,9 @@ class SoftwareRenderer : public SVGRenderer {
   // Render target memory location
   unsigned char* render_target; 
 
+  // supersample render target
+  std::vector<std::vector<std::vector<std::vector<Color>>>> ss_render_target;
+
   // Target buffer dimension (in pixels)
   size_t target_w; size_t target_h;
 
