@@ -12,15 +12,15 @@
 using namespace std;
 
 //////////////// Competitive Programming Version ///////////////
-typedef complex<double> pt;
-#define x_ real() // DO NOT USE x_ & y_ AS VARIABLE NAMES!!!
-#define y_ imag() 
+// typedef complex<double> pt;
+// #define x_ real() // DO NOT USE x_ & y_ AS VARIABLE NAMES!!!
+// #define y_ imag() 
 
-// Products
-double dot(pt v, pt w) {return (conj(v)*w).x_;}
-double cross(pt v, pt w) {return (conj(v)*w).y_;}
-// < 0 c is left of ab, > 0 c is right, = 0 colinear
-double orient(pt a, pt b, pt c) {return cross(b-a,c-a);}
+// // Products
+// double dot(pt v, pt w) {return (conj(v)*w).x_;}
+// double cross(pt v, pt w) {return (conj(v)*w).y_;}
+// // < 0 c is left of ab, > 0 c is right, = 0 colinear
+// double orient(pt a, pt b, pt c) {return cross(b-a,c-a);}
 
 //////////////////////////////////////////////////////////////////
 
@@ -295,14 +295,27 @@ void SoftwareRendererImp::rasterize_line( float x0, float y0,
 
 }
 
-bool is_inside(pt a, pt b, pt c, pt sample){
+// screen point
+struct scr_pt {
+  double x, y;
+};
+
+// < 0 c is left of ab, > 0 c is right, = 0 colinear
+double orient(scr_pt a, scr_pt b, scr_pt c){
+  return (b.x - a.x)*(c.y - a.y) - (c.x - a.x)*(b.y - a.y);
+}
+
+bool is_inside(scr_pt a, scr_pt b, scr_pt c, scr_pt sample){
+  
   double sign_0 = orient( a,  b,  sample);
   double sign_1 = orient( b,  c,  sample);
   double sign_2 = orient( c,  a,  sample);
 
-  if(sign_0 <= 0 && sign_1 <= 0 && sign_2 <= 0) return true;
-  else if(sign_0 >= 0 && sign_1 >= 0 && sign_2 >= 0) return true;
-  return false;
+  bool all_pos = sign_0 >= 0 && sign_1 >= 0 && sign_2 >= 0;
+  bool all_neg = sign_0 <= 0 && sign_1 <= 0 && sign_2 <= 0;
+
+  return all_pos || all_neg;
+
 }
 
 
@@ -312,13 +325,12 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
                                               Color color ) {
   // Task 1: 
   // Implement triangle rasterization (you may want to call fill_sample here)
-  if (min({x0, x1, x2, y0, y1, y2}) < 0 || max({x0, x1, x2}) >= target_w) return;
-  if (max({y0, y1, y2}) >= target_h) return;
 
-  // < 0 c is left of ab, > 0 c is right, = 0 colinear
-  // double orient(pt a, pt b, pt c) {return cross(b-a,c-a);}
+  // 
+  if (min({x0, x1, x2}) < 0 || max({x0, x1, x2}) >= target_w) return;
+  if (min({y0, y1, y2}) < 0 || max({y0, y1, y2}) >= target_h) return;
 
-  pt a = {x0, y0}, b = {x1, y1}, c = {x2, y2};
+  scr_pt a = {x0, y0}, b = {x1, y1}, c = {x2, y2};
 
   int min_tr_w = floor( min({x0, x1, x2}) );
   int max_tr_w = floor( max({x0, x1, x2}) );
@@ -328,14 +340,14 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   float jump = 1.0 / this->sample_rate;
   for (int x = min_tr_w; x <= max_tr_w; x++){
     for(int y = min_tr_h; y <= max_tr_h; y++){
-      //pt sample = {x + 0.5, y + 0.5};
+      //scr_pt sample = {x + 0.5, y + 0.5};
       //if (is_inside(a,b,c,sample)) fill_pixel(x,y,color);
       int cnt = 0;
       for(int dx = 0; dx < this->sample_rate; dx++){
         for(int dy = 0; dy < this->sample_rate; dy++){
           float new_x = x + jump * dx + jump / 2;
           float new_y = y + jump * dy + jump / 2;
-          pt sample = {new_x, new_y};
+          scr_pt sample = {new_x, new_y};
           if (is_inside(a, b, c, sample)) cnt++;
         }
       }
