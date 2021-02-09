@@ -31,16 +31,7 @@ namespace CS248 {
 
 
 // fill a sample location with color
-void SoftwareRendererImp::fill_sample(int sx, int sy, const Color &color) {
-
-}
-
-// fill samples in the entire pixel specified by pixel coordinates
-void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
-
-  // Task 2: Re-implement this function
-
-  // check bounds
+void SoftwareRendererImp::fill_sample(int x, int y, const Color &color) {
   if (x < 0 || x >= target_w) return;
   if (y < 0 || y >= target_h) return;
 
@@ -57,6 +48,24 @@ void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
   render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
   render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
   render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
+
+}
+
+// fill samples in the entire pixel specified by pixel coordinates
+void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
+
+  // Task 2: Re-implement this function
+
+  // check bounds
+  if (x < 0 || x >= target_w) return;
+  if (y < 0 || y >= target_h) return;
+
+  for (int dx = 0; dx < this->sample_rate; dx++) {
+    for (int dy = 0; dy < this->sample_rate; dy++) {
+      ss_render_target[x][y][dx][dy] =
+        ref->alpha_blending_helper(ss_render_target[x][y][dx][dy], color);
+    }
+  }
 
 }
 
@@ -391,7 +400,7 @@ void SoftwareRendererImp::resolve( void ) {
       col.g = sqrt(col.g / sample_cnt);
       col.b = sqrt(col.b / sample_cnt);
       col.a = col.a / sample_cnt;
-      fill_pixel(x, y, col);
+      fill_sample(x, y, col);
     }
   }
   return;
