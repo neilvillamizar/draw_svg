@@ -65,7 +65,7 @@ void SoftwareRendererImp::draw_svg( SVG& svg ) {
   // set top level transformation
   transformation = canvas_to_screen;
   ss_render_target = vector<vector<vector<vector<Color>>>>(target_w,
-                     vector<vector<vector<Color>>>(target_w,
+                       vector<vector<vector<Color>>>(target_h,
                          vector<vector<Color>>(this->sample_rate,
                              vector<Color>(this->sample_rate, {0, 0, 0, 0}))));
 
