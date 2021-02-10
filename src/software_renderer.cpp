@@ -418,7 +418,8 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
           scr_pt sample = { x, y };
           if (is_inside(a, b, c, sample))
               fill_pixel(x, y, color);
-          fill_pixel(x, y, Color::Black);
+          else
+              fill_pixel(x, y, Color::Black);
       }
   }
 }
