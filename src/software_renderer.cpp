@@ -320,17 +320,61 @@ double orient(scr_pt a, scr_pt b, scr_pt c) {
 
 bool is_inside(scr_pt a, scr_pt b, scr_pt c, scr_pt sample) {
 
-  double sign_0 = orient( a,  b,  sample);
-  double sign_1 = orient( b,  c,  sample);
-  double sign_2 = orient( c,  a,  sample);
+    double sign_0 = orient(a, b, sample);
+    double sign_1 = orient(b, c, sample);
+    double sign_2 = orient(c, a, sample);
 
-  bool all_pos = sign_0 >= 0 && sign_1 >= 0 && sign_2 >= 0;
-  bool all_neg = sign_0 <= 0 && sign_1 <= 0 && sign_2 <= 0;
+    bool all_pos = sign_0 >= 0 && sign_1 >= 0 && sign_2 >= 0;
+    bool all_neg = sign_0 <= 0 && sign_1 <= 0 && sign_2 <= 0;
 
-  return all_pos || all_neg;
+    return all_pos || all_neg;
 
 }
 
+double get_horizontal_step(scr_pt a, scr_pt b) {
+    return (b.y - a.y);
+}
+
+double get_vertical_step(scr_pt a, scr_pt b) {
+    return (b.x - a.x);
+}
+
+int check_path(int value, int dir, int x, scr_pt a, scr_pt b, scr_pt c) {
+    int it = 0;
+    scr_pt sample = { x, value };
+    while (is_inside(a, b, c, sample))
+    {
+        it++;
+        if (dir > 0) sample.y += it;
+        else sample.y -= it;
+    }
+
+    return it;
+}
+
+void update_boundaries(int& min, int& max, int x, scr_pt a, scr_pt b, scr_pt c){
+    // Check if there is any room to grow up for the min
+    int to_path = check_path(min, -1, x, a, b, c);
+
+    if(to_path == 0) to_path = check_path(min, 1, x, a, b, c);
+
+    min -= to_path;
+
+    to_path = 0;
+    // Same check up for the max
+    to_path = check_path(max, 1, x, a, b, c);
+
+    if (to_path == 0) to_path = check_path(min,-1, x, a, b, c);
+
+    max += to_path;
+}
+
+int get_pair_y(scr_pt a, scr_pt b, scr_pt c, int to_find)
+{
+    if (floor(a.x) == to_find) return floor(a.y);
+    else if (floor(b.x) == to_find) return floor(b.y);
+    return floor(c.y);
+}
 
 void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
     float x1, float y1,
@@ -350,7 +394,7 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   int min_tr_h = floor( min({y0, y1, y2}) );
   int max_tr_h = floor( max({y0, y1, y2}) );
 
-  float jump = 1.0 / this->sample_rate;
+  /*float jump = 1.0 / this->sample_rate;
   for (int x = min_tr_w; x <= max_tr_w; x++) {
     for (int y = min_tr_h; y <= max_tr_h; y++) {
       for (int dx = 0; dx < this->sample_rate; dx++) {
@@ -363,6 +407,19 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
         }
       }
     }
+  }*/
+
+  int y_min = get_pair_y(a, b, c, min_tr_w);
+  int y_max = y_min;
+
+  for (int x = min_tr_w; x <= max_tr_w; x++) {
+      update_boundaries(y_min, y_max, x, a, b, c);
+      for (int y = y_min; y <= y_max; y++) {
+          scr_pt sample = { x, y };
+          if (is_inside(a, b, c, sample))
+              fill_pixel(x, y, color);
+          fill_pixel(x, y, Color::Black);
+      }
   }
 }
 
