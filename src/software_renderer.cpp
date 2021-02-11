@@ -322,14 +322,14 @@ double orient(scr_pt a, scr_pt b, scr_pt c) {
 
 bool is_inside(scr_pt a, scr_pt b, scr_pt c, scr_pt sample) {
 
-    double sign_0 = orient(a, b, sample);
-    double sign_1 = orient(b, c, sample);
-    double sign_2 = orient(c, a, sample);
+  double sign_0 = orient(a, b, sample);
+  double sign_1 = orient(b, c, sample);
+  double sign_2 = orient(c, a, sample);
 
-    bool all_pos = sign_0 >= 0 && sign_1 >= 0 && sign_2 >= 0;
-    bool all_neg = sign_0 <= 0 && sign_1 <= 0 && sign_2 <= 0;
+  bool all_pos = sign_0 >= 0 && sign_1 >= 0 && sign_2 >= 0;
+  bool all_neg = sign_0 <= 0 && sign_1 <= 0 && sign_2 <= 0;
 
-    return all_pos || all_neg;
+  return all_pos || all_neg;
 
 }
 
@@ -343,11 +343,11 @@ double get_vertical_step(scr_pt a, scr_pt b) {
 
 bool SoftwareRendererImp::is_inside_pixel(scr_pt a, scr_pt b, scr_pt c, int x, int y) {
 
-  float jump = 1.0 / (2.0 * this->sample_rate);
+  float jump = 1.0 / this->sample_rate;
 
   for (int dx = 0; dx < this->sample_rate; dx++) {
     for (int dy = 0; dy < this->sample_rate; dy++) {
-      
+
       double new_x = x + jump * dx + jump / 2;
       double new_y = y + jump * dy + jump / 2;
       scr_pt sample = {new_x, new_y};
@@ -358,69 +358,25 @@ bool SoftwareRendererImp::is_inside_pixel(scr_pt a, scr_pt b, scr_pt c, int x, i
   }
 
   return false;
-
 }
 
-int SoftwareRendererImp::check_path(int dir, int x, int y, scr_pt a, scr_pt b, scr_pt c) {
-
-    int it = 0;
-    
-    if(is_inside_pixel(a, b, c, x, y)){
-      //y += dir;
-      while( (y < this->target_h) && (y >= 0) 
-                                  && is_inside_pixel(a, b, c, x, y)){
-        y += dir;
+bool SoftwareRendererImp::try_to_fill(scr_pt a, scr_pt b, scr_pt c, int x, int y, Color color) {
+  float jump = 1.0 / this->sample_rate;
+  bool ret = false;
+  for (int dx = 0; dx < this->sample_rate; dx++) {
+    for (int dy = 0; dy < this->sample_rate; dy++) {
+      float new_x = x + jump * dx + jump / 2;
+      float new_y = y + jump * dy + jump / 2;
+      scr_pt sample = {new_x, new_y};
+      if (is_inside(a, b, c, sample)){
+        ss_render_target[x][y][dx][dy] = color;
+        ret = true;
       }
-
-      return y - dir;
     }
-
-    //y -= dir;
-
-    while((y < this->target_h) && (y >= 0) 
-                                  && !is_inside_pixel(a, b, c, x, y))
-      y -= dir;
-
-    
-    if(!((y < this->target_h) && (y >= 0)))
-      return y + dir;
-
-    return y;
+  }
+  return ret;
 }
 
-void SoftwareRendererImp::update_boundaries(int& min, int& max, int x, scr_pt a, scr_pt b, scr_pt c){
-    // Check if there is any room to grow up for the min
-    
-    min = check_path(-1, x, min, a, b, c);
-
-    max = check_path(1, x, min, a, b, c);
-
-}
-
-tuple<int, int> get_pair_y(scr_pt a, scr_pt b, scr_pt c, int to_find, int max_y_val) {
-    //if (floor(a.x) == to_find) return floor(a.y);
-    //else if (floor(b.x) == to_find) return floor(b.y);
-    //return floor(c.y);
-
-    int min_y = max_y_val, max_y = 0;
-
-    if(floor(a.x) == to_find){
-      min_y = min(min_y, (int) a.y);
-      max_y = max(max_y, (int) a.y);
-    }
-
-    if(floor(b.x) == to_find){
-      min_y = min(min_y, (int) b.y);
-      max_y = max(max_y, (int) b.y);
-    }
-
-    if(floor(c.x) == to_find){
-      min_y = min(min_y, (int) c.y);
-      max_y = max(max_y, (int) c.y);
-    }
-
-    return {min_y, max_y};
-}
 
 void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
     float x1, float y1,
@@ -433,62 +389,56 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
   if (min({x0, x1, x2}) < 0 || max({x0, x1, x2}) >= target_w) return;
   if (min({y0, y1, y2}) < 0 || max({y0, y1, y2}) >= target_h) return;
 
+
   scr_pt a = {x0, y0}, b = {x1, y1}, c = {x2, y2};
 
   int min_tr_w = floor( min({x0, x1, x2}) );
   int max_tr_w = floor( max({x0, x1, x2}) );
-  //int min_tr_h = floor( min({y0, y1, y2}) );
-  //int max_tr_h = floor( max({y0, y1, y2}) );
+  int min_tr_h = floor( min({y0, y1, y2}) );
+  int max_tr_h = floor( max({y0, y1, y2}) );
 
-  /*float jump = 1.0 / this->sample_rate;
+  int prom_y = 0;
+  if (floor(x0) == min_tr_w) prom_y = floor(y0);
+  if (floor(x1) == min_tr_w) prom_y = floor(y1);
+  if (floor(x2) == min_tr_w) prom_y = floor(y2);
+
   for (int x = min_tr_w; x <= max_tr_w; x++) {
-    for (int y = min_tr_h; y <= max_tr_h; y++) {
-      for (int dx = 0; dx < this->sample_rate; dx++) {
-        for (int dy = 0; dy < this->sample_rate; dy++) {
-          float new_x = x + jump * dx + jump / 2;
-          float new_y = y + jump * dy + jump / 2;
-          scr_pt sample = {new_x, new_y};
-          if (is_inside(a, b, c, sample))
-            ss_render_target[x][y][dx][dy] = color;
-        }
-      }
+    int mn_y = prom_y, mx_y = prom_y;
+    if (is_inside_pixel(a, b, c, x, prom_y)) {
+      while (try_to_fill(a, b, c, x, mx_y, color)) ++mx_y;
+      while (try_to_fill(a, b, c, x, mn_y, color)) --mn_y;
+      prom_y = (mn_y + mx_y) / 2;
     }
-  }*/
-
-  float jump = 1.0 / this->sample_rate;
-
-  int y_min, y_max;
-  tie(y_min, y_max) = get_pair_y(a, b, c, min_tr_w, this->target_h);
-
-  for (int x = min_tr_w; x <= max_tr_w; x++) {
-      
-      if(x > min_tr_w) 
-        update_boundaries(y_min, y_max, x, a, b, c);
-      
-      for (int y = y_min; y <= y_max; y++) {
-          
-
-          for (int dx = 0; dx < this->sample_rate; dx++) {
-            for (int dy = 0; dy < this->sample_rate; dy++) {
-              
-              double new_x = x + jump * dx + jump / 2;
-              double new_y = y + jump * dy + jump / 2;
-              scr_pt sample = {new_x, new_y};
-
-              if (is_inside(a, b, c, sample))
-                ss_render_target[x][y][dx][dy] = color;
-              else
-                ss_render_target[x][y][dx][dy] = Color::Black;
-            }
-          }
-
-          /*scr_pt sample = { x, y };
-          if (is_inside(a, b, c, sample))
-              fill_pixel(x, y, color);
-          else
-              fill_pixel(x, y, Color::Black);*/
+    else {
+      int direction = 0, moves = 1;
+      while (direction == 0) {
+        // try going down
+        if (prom_y + moves <= max_tr_h &&
+            is_inside_pixel(a, b, c, x, prom_y + moves)) {
+          direction = 1;
+          prom_y += moves;
+        }
+        // try going up
+        else if (prom_y - moves >= min_tr_h &&
+                 is_inside_pixel(a, b, c, x, prom_y - moves)) {
+          direction = -1;
+          prom_y -= moves;
+        }
+        // if you cant move more break
+        else if (prom_y - moves < min_tr_h && prom_y + moves > max_tr_h)
+          break;
+        moves++;
       }
+
+      mn_y = prom_y, mx_y = prom_y;
+      if (direction == 1)
+        while (try_to_fill(a, b, c, x, mx_y, color)) ++mx_y;
+      else if (direction == -1)
+        while (try_to_fill(a, b, c, x, mn_y, color)) --mn_y;
+      prom_y = (mn_y + mx_y) / 2;
+    }
   }
+
 }
 
 void SoftwareRendererImp::rasterize_image( float x0, float y0,

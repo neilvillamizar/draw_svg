@@ -118,6 +118,10 @@ private:
 	// check if exist a sample of the pixel inside a triangle
 	bool is_inside_pixel(scr_pt a, scr_pt b, scr_pt c, int x, int y);
 
+	// try to fill pixel inside a triangle
+	bool try_to_fill(scr_pt a, scr_pt b, scr_pt c, int x, int y, Color color);
+
+
 	// Primitive Drawing //
 
 	// Draws an SVG element
