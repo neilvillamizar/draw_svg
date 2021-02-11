@@ -5,7 +5,8 @@
 #include <iostream>
 #include <algorithm>
 
-#include <complex> // import complex<>
+//#include <complex> // import complex<>
+#include <tuple>
 
 #include "triangulation.h"
 
@@ -308,10 +309,11 @@ void SoftwareRendererImp::rasterize_line( float x0, float y0,
 
 }
 
-// screen point
+/*// screen point
 struct scr_pt {
   double x, y;
-};
+};*/
+typedef SoftwareRendererImp::scr_pt scr_pt;
 
 // < 0 c is left of ab, > 0 c is right, = 0 colinear
 double orient(scr_pt a, scr_pt b, scr_pt c) {
@@ -331,49 +333,93 @@ bool is_inside(scr_pt a, scr_pt b, scr_pt c, scr_pt sample) {
 
 }
 
-double get_horizontal_step(scr_pt a, scr_pt b) {
+/*double get_horizontal_step(scr_pt a, scr_pt b) {
     return (b.y - a.y);
 }
 
 double get_vertical_step(scr_pt a, scr_pt b) {
     return (b.x - a.x);
+}*/
+
+bool SoftwareRendererImp::is_inside_pixel(scr_pt a, scr_pt b, scr_pt c, int x, int y) {
+
+  float jump = 1.0 / (2.0 * this->sample_rate);
+
+  for (int dx = 0; dx < this->sample_rate; dx++) {
+    for (int dy = 0; dy < this->sample_rate; dy++) {
+      
+      double new_x = x + jump * dx + jump / 2;
+      double new_y = y + jump * dy + jump / 2;
+      scr_pt sample = {new_x, new_y};
+
+      if (is_inside(a, b, c, sample))
+        return true;
+    }
+  }
+
+  return false;
+
 }
 
-int check_path(int value, int dir, int x, scr_pt a, scr_pt b, scr_pt c) {
+int SoftwareRendererImp::check_path(int dir, int x, int y, scr_pt a, scr_pt b, scr_pt c) {
+
     int it = 0;
-    scr_pt sample = { x, value };
-    while (is_inside(a, b, c, sample))
-    {
-        it++;
-        if (dir > 0) sample.y += it;
-        else sample.y -= it;
+    
+    if(is_inside_pixel(a, b, c, x, y)){
+      //y += dir;
+      while( (y < this->target_h) && (y >= 0) 
+                                  && is_inside_pixel(a, b, c, x, y)){
+        y += dir;
+      }
+
+      return y - dir;
     }
 
-    return it;
+    //y -= dir;
+
+    while((y < this->target_h) && (y >= 0) 
+                                  && !is_inside_pixel(a, b, c, x, y))
+      y -= dir;
+
+    
+    if(!((y < this->target_h) && (y >= 0)))
+      return y + dir;
+
+    return y;
 }
 
-void update_boundaries(int& min, int& max, int x, scr_pt a, scr_pt b, scr_pt c){
+void SoftwareRendererImp::update_boundaries(int& min, int& max, int x, scr_pt a, scr_pt b, scr_pt c){
     // Check if there is any room to grow up for the min
-    int to_path = check_path(min, -1, x, a, b, c);
+    
+    min = check_path(-1, x, min, a, b, c);
 
-    if(to_path == 0) to_path = check_path(min, 1, x, a, b, c);
+    max = check_path(1, x, min, a, b, c);
 
-    min -= to_path;
-
-    to_path = 0;
-    // Same check up for the max
-    to_path = check_path(max, 1, x, a, b, c);
-
-    if (to_path == 0) to_path = check_path(min,-1, x, a, b, c);
-
-    max += to_path;
 }
 
-int get_pair_y(scr_pt a, scr_pt b, scr_pt c, int to_find)
-{
-    if (floor(a.x) == to_find) return floor(a.y);
-    else if (floor(b.x) == to_find) return floor(b.y);
-    return floor(c.y);
+tuple<int, int> get_pair_y(scr_pt a, scr_pt b, scr_pt c, int to_find, int max_y_val) {
+    //if (floor(a.x) == to_find) return floor(a.y);
+    //else if (floor(b.x) == to_find) return floor(b.y);
+    //return floor(c.y);
+
+    int min_y = max_y_val, max_y = 0;
+
+    if(floor(a.x) == to_find){
+      min_y = min(min_y, (int) a.y);
+      max_y = max(max_y, (int) a.y);
+    }
+
+    if(floor(b.x) == to_find){
+      min_y = min(min_y, (int) b.y);
+      max_y = max(max_y, (int) b.y);
+    }
+
+    if(floor(c.x) == to_find){
+      min_y = min(min_y, (int) c.y);
+      max_y = max(max_y, (int) c.y);
+    }
+
+    return {min_y, max_y};
 }
 
 void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
@@ -391,8 +437,8 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
 
   int min_tr_w = floor( min({x0, x1, x2}) );
   int max_tr_w = floor( max({x0, x1, x2}) );
-  int min_tr_h = floor( min({y0, y1, y2}) );
-  int max_tr_h = floor( max({y0, y1, y2}) );
+  //int min_tr_h = floor( min({y0, y1, y2}) );
+  //int max_tr_h = floor( max({y0, y1, y2}) );
 
   /*float jump = 1.0 / this->sample_rate;
   for (int x = min_tr_w; x <= max_tr_w; x++) {
@@ -409,17 +455,38 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
     }
   }*/
 
-  int y_min = get_pair_y(a, b, c, min_tr_w);
-  int y_max = y_min;
+  float jump = 1.0 / this->sample_rate;
+
+  int y_min, y_max;
+  tie(y_min, y_max) = get_pair_y(a, b, c, min_tr_w, this->target_h);
 
   for (int x = min_tr_w; x <= max_tr_w; x++) {
-      update_boundaries(y_min, y_max, x, a, b, c);
+      
+      if(x > min_tr_w) 
+        update_boundaries(y_min, y_max, x, a, b, c);
+      
       for (int y = y_min; y <= y_max; y++) {
-          scr_pt sample = { x, y };
+          
+
+          for (int dx = 0; dx < this->sample_rate; dx++) {
+            for (int dy = 0; dy < this->sample_rate; dy++) {
+              
+              double new_x = x + jump * dx + jump / 2;
+              double new_y = y + jump * dy + jump / 2;
+              scr_pt sample = {new_x, new_y};
+
+              if (is_inside(a, b, c, sample))
+                ss_render_target[x][y][dx][dy] = color;
+              else
+                ss_render_target[x][y][dx][dy] = Color::Black;
+            }
+          }
+
+          /*scr_pt sample = { x, y };
           if (is_inside(a, b, c, sample))
               fill_pixel(x, y, color);
           else
-              fill_pixel(x, y, Color::Black);
+              fill_pixel(x, y, Color::Black);*/
       }
   }
 }
@@ -465,8 +532,7 @@ void SoftwareRendererImp::resolve( void ) {
 
 }
 
-Color SoftwareRendererImp::alpha_blending(Color pixel_color, Color color)
-{
+Color SoftwareRendererImp::alpha_blending(Color pixel_color, Color color) {
   // Task 5
   // Implement alpha compositing
   return pixel_color;

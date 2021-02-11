@@ -98,10 +98,25 @@ public:
 	void fill_sample(int sx, int sy, const Color& color);
 	void fill_pixel(int x, int y, const Color& color);
 
+	// screen point
+	struct scr_pt {
+  		double x, y;
+	};
+
 private:
+
 
 	// supersample render target
 	std::vector<std::vector<std::vector<std::vector<Color>>>> ss_render_target;
+
+	// check if there are more pixel inside the triangle in some direction
+	int check_path(int dir, int x, int y, scr_pt a, scr_pt b, scr_pt c);
+
+	// Update the limits fo the triangle in the y-axis for a given x coordinate
+	void update_boundaries(int& min, int& max, int x, scr_pt a, scr_pt b, scr_pt c);
+
+	// check if exist a sample of the pixel inside a triangle
+	bool is_inside_pixel(scr_pt a, scr_pt b, scr_pt c, int x, int y);
 
 	// Primitive Drawing //
 
