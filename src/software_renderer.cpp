@@ -35,19 +35,10 @@ void SoftwareRendererImp::fill_sample(int x, int y, const Color &color) {
   if (x < 0 || x >= target_w) return;
   if (y < 0 || y >= target_h) return;
 
-  Color pixel_color;
-  float inv255 = 1.0 / 255.0;
-  pixel_color.r = render_target[4 * (x + y * target_w)] * inv255;
-  pixel_color.g = render_target[4 * (x + y * target_w) + 1] * inv255;
-  pixel_color.b = render_target[4 * (x + y * target_w) + 2] * inv255;
-  pixel_color.a = render_target[4 * (x + y * target_w) + 3] * inv255;
-
-  pixel_color = alpha_blending(pixel_color, color);
-
-  render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
-  render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
-  render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
-  render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
+  render_target[4 * (x + y * target_w)] = (uint8_t)(color.r * 255);
+  render_target[4 * (x + y * target_w) + 1] = (uint8_t)(color.g * 255);
+  render_target[4 * (x + y * target_w) + 2] = (uint8_t)(color.b * 255);
+  render_target[4 * (x + y * target_w) + 3] = (uint8_t)(color.a * 255);
 
 }
 
@@ -376,7 +367,8 @@ void SoftwareRendererImp::rasterize_triangle( float x0, float y0,
           float new_y = y + jump * dy + jump / 2;
           scr_pt sample = {new_x, new_y};
           if (is_inside(a, b, c, sample))
-            ss_render_target[x][y][dx][dy] = color;
+            ss_render_target[x][y][dx][dy] =
+              alpha_blending(ss_render_target[x][y][dx][dy], color);
         }
       }
     }
@@ -429,12 +421,10 @@ Color SoftwareRendererImp::alpha_blending(Color pixel_color, Color color)
   // Task 5
   // Implement alpha compositing
 
-  //pixel_color = {
-  pixel_color.r = (float)(1.0 - color.a) * pixel_color.r + color.r;
-  pixel_color.g =  (float)(1.0 - color.a) * pixel_color.g + color.g;
-  pixel_color.b =  (float)(1.0 - color.a) * pixel_color.b + color.b;
-  pixel_color.a =  (float)(1.0 - (1.0 - color.a) * (1.0 - pixel_color.a));
-  //};
+  pixel_color.r = (1.f - color.a) * pixel_color.r + color.r;
+  pixel_color.g = (1.f - color.a) * pixel_color.g + color.g;
+  pixel_color.b = (1.f - color.a) * pixel_color.b + color.b;
+  pixel_color.a = (1.f - (1.f - color.a) * (1.f - pixel_color.a));
 
   return pixel_color;
 }
