@@ -376,7 +376,7 @@ bool SoftwareRendererImp::try_to_fill(scr_pt a, scr_pt b, scr_pt c, int x, int y
       float new_x = x + jump * dx + jump / 2;
       float new_y = y + jump * dy + jump / 2;
       scr_pt sample = {new_x, new_y};
-      if (is_inside(a, b, c, sample)){
+      if (is_inside(a, b, c, sample)) {
         ss_render_target[x][y][dx][dy] = color;
         ret = true;
       }
@@ -451,7 +451,8 @@ void SoftwareRendererImp::rasterize_image( float x0, float y0,
           float v = (new_y - y0) / (y1 - y0);
 
           Color pixelColor = sampler->sample_nearest(tex, u, v, 0);
-          fill_sample(x * sample_rate + dx, y * sample_rate + dy, pixelColor);
+          ss_render_target[x][y][dx][dy] =
+            alpha_blending(ss_render_target[x][y][dx][dy], pixelColor);
         }
       }
     }
