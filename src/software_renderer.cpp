@@ -61,7 +61,7 @@ void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
   for (int dx = 0; dx < this->sample_rate; dx++) {
     for (int dy = 0; dy < this->sample_rate; dy++) {
       ss_render_target[x][y][dx][dy] =
-        ref->alpha_blending_helper(ss_render_target[x][y][dx][dy], color);
+        alpha_blending(ss_render_target[x][y][dx][dy], color);
     }
   }
 
@@ -74,7 +74,7 @@ void SoftwareRendererImp::draw_svg( SVG& svg ) {
   ss_render_target = vector<vector<vector<vector<Color>>>>(target_w,
                      vector<vector<vector<Color>>>(target_h,
                          vector<vector<Color>>(this->sample_rate,
-                             vector<Color>(this->sample_rate, {0, 0, 0, 0}))));
+                             vector<Color>(this->sample_rate, {1,1,1,1}))));
 
 
   // draw all elements
@@ -420,13 +420,17 @@ Color SoftwareRendererImp::alpha_blending(Color pixel_color, Color color)
 {
   // Task 5
   // Implement alpha compositing
+  Color ret;
+  ret.r = 
+    (1.f - color.a) * pixel_color.a * pixel_color.r + color.a * color.r;
+  ret.g = 
+    (1.f - color.a) * pixel_color.a * pixel_color.g + color.a * color.g;
+  ret.b = 
+    (1.f - color.a) * pixel_color.a * pixel_color.b + color.a * color.b;
+  ret.a = 
+    1.f - (1.f - pixel_color.a) * (1.f - color.a);
 
-  pixel_color.r = (1.f - color.a) * pixel_color.r + color.r;
-  pixel_color.g = (1.f - color.a) * pixel_color.g + color.g;
-  pixel_color.b = (1.f - color.a) * pixel_color.b + color.b;
-  pixel_color.a = (1.f - (1.f - color.a) * (1.f - pixel_color.a));
-
-  return pixel_color;
+  return ret;
 }
 
 
