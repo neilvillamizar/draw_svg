@@ -35,10 +35,19 @@ void SoftwareRendererImp::fill_sample(int x, int y, const Color &color) {
   if (x < 0 || x >= target_w) return;
   if (y < 0 || y >= target_h) return;
 
-  render_target[4 * (x + y * target_w)] = (uint8_t)(color.r * 255);
-  render_target[4 * (x + y * target_w) + 1] = (uint8_t)(color.g * 255);
-  render_target[4 * (x + y * target_w) + 2] = (uint8_t)(color.b * 255);
-  render_target[4 * (x + y * target_w) + 3] = (uint8_t)(color.a * 255);
+  Color pixel_color;
+  float inv255 = 1.0 / 255.0;
+  pixel_color.r = render_target[4 * (x + y * target_w)] * inv255;
+  pixel_color.g = render_target[4 * (x + y * target_w) + 1] * inv255;
+  pixel_color.b = render_target[4 * (x + y * target_w) + 2] * inv255;
+  pixel_color.a = render_target[4 * (x + y * target_w) + 3] * inv255;
+
+  pixel_color = alpha_blending(pixel_color, color);
+
+  render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
+  render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
+  render_target[4 * (x + y * target_w) + 2] = (uint8_t)(pixel_color.b * 255);
+  render_target[4 * (x + y * target_w) + 3] = (uint8_t)(pixel_color.a * 255);
 
 }
 
