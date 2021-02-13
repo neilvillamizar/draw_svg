@@ -42,7 +42,7 @@ void SoftwareRendererImp::fill_sample(int x, int y, const Color &color) {
   pixel_color.b = render_target[4 * (x + y * target_w) + 2] * inv255;
   pixel_color.a = render_target[4 * (x + y * target_w) + 3] * inv255;
 
-  pixel_color = ref->alpha_blending_helper(pixel_color, color);
+  pixel_color = alpha_blending(pixel_color, color);
 
   render_target[4 * (x + y * target_w)] = (uint8_t)(pixel_color.r * 255);
   render_target[4 * (x + y * target_w) + 1] = (uint8_t)(pixel_color.g * 255);
@@ -60,10 +60,17 @@ void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
   if (x < 0 || x >= target_w) return;
   if (y < 0 || y >= target_h) return;
 
+  /*Color auxColor;
+  float inv255 = 1.0 / 255.0;
+  auxColor.r = render_target[4 * (x + y * target_w)];
+  auxColor.g = render_target[4 * (x + y * target_w) + 1];
+  auxColor.b = render_target[4 * (x + y * target_w) + 2];
+  auxColor.a = render_target[4 * (x + y * target_w) + 3];*/
+
   for (int dx = 0; dx < this->sample_rate; dx++) {
     for (int dy = 0; dy < this->sample_rate; dy++) {
       ss_render_target[x][y][dx][dy] =
-        ref->alpha_blending_helper(ss_render_target[x][y][dx][dy], color);
+        alpha_blending(ss_render_target[x][y][dx][dy], color);
     }
   }
 
@@ -77,6 +84,7 @@ void SoftwareRendererImp::draw_svg( SVG& svg ) {
                      vector<vector<vector<Color>>>(target_h,
                          vector<vector<Color>>(this->sample_rate,
                              vector<Color>(this->sample_rate, {0, 0, 0, 0}))));
+
 
   // draw all elements
   for ( size_t i = 0; i < svg.elements.size(); ++i ) {
@@ -420,6 +428,14 @@ Color SoftwareRendererImp::alpha_blending(Color pixel_color, Color color)
 {
   // Task 5
   // Implement alpha compositing
+
+  //pixel_color = {
+  pixel_color.r = (float)(1.0 - color.a) * pixel_color.r + color.r;
+  pixel_color.g =  (float)(1.0 - color.a) * pixel_color.g + color.g;
+  pixel_color.b =  (float)(1.0 - color.a) * pixel_color.b + color.b;
+  pixel_color.a =  (float)(1.0 - (1.0 - color.a) * (1.0 - pixel_color.a));
+  //};
+
   return pixel_color;
 }
 
