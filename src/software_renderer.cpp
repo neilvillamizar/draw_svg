@@ -5,7 +5,8 @@
 #include <iostream>
 #include <algorithm>
 
-#include <complex> // import complex<>
+//#include <complex> // import complex<>
+#include <tuple>
 
 #include "triangulation.h"
 
@@ -316,10 +317,11 @@ void SoftwareRendererImp::rasterize_line( float x0, float y0,
 
 }
 
-// screen point
+/*// screen point
 struct scr_pt {
   double x, y;
-};
+};*/
+typedef SoftwareRendererImp::scr_pt scr_pt;
 
 // < 0 c is left of ab, > 0 c is right, = 0 colinear
 double orient(scr_pt a, scr_pt b, scr_pt c) {
@@ -328,15 +330,59 @@ double orient(scr_pt a, scr_pt b, scr_pt c) {
 
 bool is_inside(scr_pt a, scr_pt b, scr_pt c, scr_pt sample) {
 
-  double sign_0 = orient( a,  b,  sample);
-  double sign_1 = orient( b,  c,  sample);
-  double sign_2 = orient( c,  a,  sample);
+  double sign_0 = orient(a, b, sample);
+  double sign_1 = orient(b, c, sample);
+  double sign_2 = orient(c, a, sample);
 
   bool all_pos = sign_0 >= 0 && sign_1 >= 0 && sign_2 >= 0;
   bool all_neg = sign_0 <= 0 && sign_1 <= 0 && sign_2 <= 0;
 
   return all_pos || all_neg;
 
+}
+
+/*double get_horizontal_step(scr_pt a, scr_pt b) {
+    return (b.y - a.y);
+}
+
+double get_vertical_step(scr_pt a, scr_pt b) {
+    return (b.x - a.x);
+}*/
+
+bool SoftwareRendererImp::is_inside_pixel(scr_pt a, scr_pt b, scr_pt c, int x, int y) {
+
+  float jump = 1.0 / this->sample_rate;
+
+  for (int dx = 0; dx < this->sample_rate; dx++) {
+    for (int dy = 0; dy < this->sample_rate; dy++) {
+
+      double new_x = x + jump * dx + jump / 2;
+      double new_y = y + jump * dy + jump / 2;
+      scr_pt sample = {new_x, new_y};
+
+      if (is_inside(a, b, c, sample))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+bool SoftwareRendererImp::try_to_fill(scr_pt a, scr_pt b, scr_pt c, int x, int y, Color color) {
+  float jump = 1.0 / this->sample_rate;
+  bool ret = false;
+  for (int dx = 0; dx < this->sample_rate; dx++) {
+    for (int dy = 0; dy < this->sample_rate; dy++) {
+      float new_x = x + jump * dx + jump / 2;
+      float new_y = y + jump * dy + jump / 2;
+      scr_pt sample = {new_x, new_y};
+      if (is_inside(a, b, c, sample)){
+        ss_render_target[x][y][dx][dy] = color;
+        ret = true;
+      }
+    }
+  }
+  return ret;
 }
 
 
@@ -445,8 +491,7 @@ void SoftwareRendererImp::resolve( void ) {
 
 }
 
-Color SoftwareRendererImp::alpha_blending(Color pixel_color, Color color)
-{
+Color SoftwareRendererImp::alpha_blending(Color pixel_color, Color color) {
   // Task 5
   // Implement alpha compositing
   Color ret;
