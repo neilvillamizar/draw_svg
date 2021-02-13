@@ -61,7 +61,7 @@ void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
   for (int dx = 0; dx < this->sample_rate; dx++) {
     for (int dy = 0; dy < this->sample_rate; dy++) {
       ss_render_target[x][y][dx][dy] =
-        alpha_blending(ss_render_target[x][y][dx][dy], color);
+        ref->alpha_blending_helper(ss_render_target[x][y][dx][dy], color);
     }
   }
 
