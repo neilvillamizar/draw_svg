@@ -12,19 +12,6 @@
 
 using namespace std;
 
-//////////////// Competitive Programming Version ///////////////
-// typedef complex<double> pt;
-// #define x_ real() // DO NOT USE x_ & y_ AS VARIABLE NAMES!!!
-// #define y_ imag()
-
-// // Products
-// double dot(pt v, pt w) {return (conj(v)*w).x_;}
-// double cross(pt v, pt w) {return (conj(v)*w).y_;}
-// // < 0 c is left of ab, > 0 c is right, = 0 colinear
-// double orient(pt a, pt b, pt c) {return cross(b-a,c-a);}
-
-//////////////////////////////////////////////////////////////////
-
 namespace CS248 {
 
 
@@ -51,13 +38,6 @@ void SoftwareRendererImp::fill_pixel(int x, int y, const Color &color) {
   // check bounds
   if (x < 0 || x >= target_w) return;
   if (y < 0 || y >= target_h) return;
-
-  /*Color auxColor;
-  float inv255 = 1.0 / 255.0;
-  auxColor.r = render_target[4 * (x + y * target_w)];
-  auxColor.g = render_target[4 * (x + y * target_w) + 1];
-  auxColor.b = render_target[4 * (x + y * target_w) + 2];
-  auxColor.a = render_target[4 * (x + y * target_w) + 3];*/
 
   for (int dx = 0; dx < this->sample_rate; dx++) {
     for (int dy = 0; dy < this->sample_rate; dy++) {
@@ -298,14 +278,7 @@ void SoftwareRendererImp::rasterize_point( float x, float y, Color color ) {
   if (sx < 0 || sx >= target_w) return;
   if (sy < 0 || sy >= target_h) return;
 
-  // fill sample - NOT doing alpha blending!
-  // TODO: Call fill_pixel here to run alpha blending
   fill_pixel(sx, sy, color);
-  /*render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
-  render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
-  render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
-  render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);*/
-
 }
 
 void SoftwareRendererImp::rasterize_line( float x0, float y0,
@@ -314,13 +287,8 @@ void SoftwareRendererImp::rasterize_line( float x0, float y0,
 
   // Extra credit (delete the line below and implement your own)
   ref->rasterize_line_helper(x0, y0, x1, y1, target_w, target_h, color, this);
-
 }
 
-/*// screen point
-struct scr_pt {
-  double x, y;
-};*/
 typedef SoftwareRendererImp::scr_pt scr_pt;
 
 // < 0 c is left of ab, > 0 c is right, = 0 colinear
